@@ -9,16 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <stdbool.h>
-
-
-// fork/
-// if child
-// dup2(output_descriptor, STDOUT_FILENO)
-// close(output_descriptor)
-
-// 1) break argv[2] into words
-// 2) find the absolute path of the command
+#include <fcntl.h>
 
 
 void add_character_to_string(char *str, char c) {
@@ -50,13 +43,11 @@ void split(char *cmd, char *words[], char delimiter) {
 
   	words[word_count++] = strdup(current_word);
     words[word_count] = NULL;
-
 }
 
 
 // true = found, false = not found
 bool find_absolute_path(char *cmd, char *absolute_path) {
-
     char*directories[1000];
 
     split(getenv("PATH"), directories, ':');
@@ -79,15 +70,20 @@ bool find_absolute_path(char *cmd, char *absolute_path) {
     return false;
 }
 
+
 int main(int argc, char *argv[]) {
-
-
-    if (argc < 4) {
+    if (argc < 3) {
         printf("Incorrect number of arguments\n");
-        printf("Usage: %s <input_file> <command> <arguments>\n", argv[0]);
+        printf("Usage: %s <output_file> <command> <arguments>\n", argv[0]);
         return 1;
     }
 
+    int output_descriptor = 0;
+
+    // Check if we need to change the output descriptor
+    if (strcmp(argv[1], "-")) {
+        output_descriptor = open(argv[1], O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+    }
 
     char absolute_path[1000];
     char *words[1000];
@@ -110,12 +106,22 @@ int main(int argc, char *argv[]) {
 
     printf("absolute_path = '%s'\n", absolute_path);    // DEBUGGING TACTIC : Have the ' ' to also be able to see extra spaces
 
-    execve(absolute_path, words, NULL);
 
+    int child_pid = fork();
 
-    // strtok is not thread safe
-        // You give it a string, it modifies the string
-        // So 2 threads can overwrite the string
+    if (child_pid == 0) {
+
+        if (output_descriptor != 0) {
+            // Think of dup2 as a reverse assignment statement
+                // Think of it like 'STDOUT_FILENO = output_descriptor'
+            dup2(output_descriptor, STDOUT_FILENO);
+            close(output_descriptor);
+        }
+
+        execve(absolute_path, words, NULL);
+    }
+
+    wait(NULL);
 
     return 0;
 }

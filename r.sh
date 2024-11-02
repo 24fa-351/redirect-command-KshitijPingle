@@ -8,4 +8,4 @@
 
 
 # compile the program
-gcc -o pipe main.c
+gcc -o redirect main.c
