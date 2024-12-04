@@ -11,4 +11,4 @@ Similarly, use a __'-'__ as the third argument if you don't want to provide any 
 
 ### Example
 `./redirect - "ls -l" -  
-./redirect output.txt "ls -l" - 
+./redirect output.txt "ls -l" -` 
